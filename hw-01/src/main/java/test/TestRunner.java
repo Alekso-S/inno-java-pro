@@ -2,84 +2,69 @@ package test;
 
 import annotation.*;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TestRunner {
-    public static void runTests(Class<?> c) throws Exception {
-        List<Method> methods = List.of(c.getDeclaredMethods());
+    public static void runTests(Class<?> aClass) throws Exception {
+        List<Method> methods = List.of(aClass.getDeclaredMethods());
         validate(methods);
 
-        Object object = c.getConstructor().newInstance();
+        Object object = aClass.getConstructor().newInstance();
+        Map<? extends Class<? extends Annotation>, List<Method>> methodMap = methods.stream()
+                .flatMap(method -> Stream.of(method.getAnnotations())
+                        .map(annotation -> Map.entry(method, annotation)))
+                .collect(Collectors.groupingBy(e ->
+                        e.getValue().annotationType(), Collectors.mapping(Map.Entry::getKey, Collectors.toList())));
 
-        runBefore(c, methods);
-        runAllSimpleTests(object, methods);
-        runAfter(c, methods);
+        runBefore(aClass, methodMap.get(BeforeSuite.class));
+        runAllSimpleTests(object,
+                methodMap.get(Test.class),
+                methodMap.get(BeforeTest.class),
+                methodMap.get(AfterTest.class));
+        runAfter(aClass, methodMap.get(AfterSuite.class));
 
-        runParameterizedTest(object, methods);
+        runParameterizedTest(object, methodMap.get(CsvSource.class));
     }
 
     private static void validate(List<Method> methods) {
-        validateAnnotationMatching(methods);
-        validateTestPriorityValue(methods);
-        validateStaticAnnotationUniqueness(methods);
-    }
-
-    private static void validateStaticAnnotationUniqueness(List<Method> methods) {
-        methods.stream()
-                .flatMap(m -> Arrays.stream(m.getAnnotations()))
-                .filter(a -> List.of(
-                        BeforeSuite.class,
-                        AfterSuite.class
-                ).contains(a.annotationType()))
-                .collect(Collectors.groupingBy(annotation -> annotation, Collectors.counting()))
-                .entrySet().stream()
-                .filter(e -> e.getValue() > 1)
-                .forEach(e -> {
-                    throw new RuntimeException("Excessive annotations count: " + e.getKey());
-                });
-    }
-
-    private static void validateTestPriorityValue(List<Method> methods) {
-        methods.stream()
-                .filter(method -> method.isAnnotationPresent(Test.class))
-                .filter(method ->
-                        method.getAnnotation(Test.class).priority() < 1 ||
-                                method.getAnnotation(Test.class).priority() > 10)
-                .forEach(method -> {
+        int staticAnnotationCnt = 0;
+        for (Method method : methods) {
+            for (Annotation annotation : method.getAnnotations()) {
+                if (annotation.annotationType().equals(BeforeSuite.class) || annotation.annotationType().equals(AfterSuite.class)) {
+                    staticAnnotationCnt++;
+                }
+                if (annotation.annotationType().equals(Test.class) &&
+                        (((Test) annotation).priority() < 1 || ((Test) annotation).priority() > 10)) {
                     throw new RuntimeException("method " + method.getName() + " has inappropriate priority value on Test annotation");
-                });
-    }
-
-    private static void validateAnnotationMatching(List<Method> methods) {
-        methods.stream()
-                .filter(method ->
-                        Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(Test.class) ||
-                                !Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(BeforeSuite.class) ||
-                                !Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(AfterSuite.class))
-                .forEach(method -> {
+                }
+                if (Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(Test.class) ||
+                        !Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(BeforeSuite.class) ||
+                        !Modifier.isStatic(method.getModifiers()) && method.isAnnotationPresent(AfterSuite.class)) {
                     throw new RuntimeException("method " + method.getName() + " has inappropriate annotation");
-                });
+                }
+            }
+        }
+        if (staticAnnotationCnt != 2) {
+            throw new RuntimeException("Inappropriate static annotations count");
+        }
     }
 
     private static void runBefore(Class<?> c, List<Method> methods) {
-        methods.stream()
-                .filter(method -> method.isAnnotationPresent(BeforeSuite.class))
-                .forEach(lambdaWrapper((method) -> method.invoke(c)));
+        methods.forEach(lambdaWrapper((method) -> method.invoke(c)));
     }
 
-    private static void runAllSimpleTests(Object object, List<Method> methods) {
-        List<Method> beforeMethods = methods.stream().filter(m -> m.isAnnotationPresent(BeforeTest.class)).toList();
-        List<Method> afterMethods = methods.stream().filter(m -> m.isAnnotationPresent(AfterTest.class)).toList();
+    private static void runAllSimpleTests(Object object, List<Method> methods, List<Method> beforeMethods, List<Method> afterMethods) {
         methods.stream()
-                .filter(method -> method.isAnnotationPresent(Test.class))
                 .sorted(Comparator.comparingInt(o -> o.getAnnotation(Test.class).priority()))
                 .forEachOrdered(lambdaWrapper(method -> {
                     beforeMethods.forEach(lambdaWrapper(method1 -> method1.invoke(object)));
@@ -95,13 +80,10 @@ public class TestRunner {
     }
 
     private static void runParameterizedTest(Object object, List<Method> methods) throws Exception {
-        Method method = methods.stream()
-                .filter(m -> m.isAnnotationPresent(CsvSource.class))
-                .findFirst().orElse(null);
-        if (method == null) {
+        if (methods.isEmpty()) {
             return;
         }
-
+        Method method = methods.get(0);
         String[] stringParams = method.getAnnotation(CsvSource.class).value().split(", ");
         ArrayList<Object> params = new ArrayList<>();
         Parameter[] parameters = method.getParameters();

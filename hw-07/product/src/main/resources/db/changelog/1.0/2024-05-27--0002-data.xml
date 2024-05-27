@@ -1,0 +1,58 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+    <changeSet author="Aleksey Sytnik" id="1">
+        <insert tableName="users">
+            <column name="name" value="Ivan"/>
+        </insert>
+        <insert tableName="users">
+            <column name="name" value="Peter"/>
+        </insert>
+        <insert tableName="users">
+            <column name="name" value="John"/>
+        </insert>
+    </changeSet>
+    <changeSet author="Aleksey Sytnik" id="2">
+        <insert tableName="products">
+            <column name="user_id" value="1"/>
+            <column name="number" value="IVAC"/>
+            <column name="balance" value="123.123"/>
+            <column name="type" value="CARD"/>
+        </insert>
+        <insert tableName="products">
+            <column name="user_id" value="1"/>
+            <column name="number" value="IVAA"/>
+            <column name="balance" value="123.123"/>
+            <column name="type" value="ACCOUNT"/>
+        </insert>
+        <insert tableName="products">
+            <column name="user_id" value="2"/>
+            <column name="number" value="PETC"/>
+            <column name="balance" value="123.123"/>
+            <column name="type" value="CARD"/>
+        </insert>
+        <insert tableName="products">
+            <column name="user_id" value="2"/>
+            <column name="number" value="PETA"/>
+            <column name="balance" value="123.123"/>
+            <column name="type" value="ACCOUNT"/>
+        </insert>
+        <insert tableName="products">
+            <column name="user_id" value="3"/>
+            <column name="number" value="JONC"/>
+            <column name="balance" value="123.123"/>
+            <column name="type" value="CARD"/>
+        </insert>
+        <insert tableName="products">
+            <column name="user_id" value="3"/>
+            <column name="number" value="JONA"/>
+            <column name="balance" value="123.123"/>
+            <column name="type" value="ACCOUNT"/>
+        </insert>
+    </changeSet>
+    <changeSet author="Aleksey Sytnik" id="3">
+        <tagDatabase tag="1.0"/>
+    </changeSet>
+</databaseChangeLog>

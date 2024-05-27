@@ -1,0 +1,42 @@
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+    <property name="now" value="now()" dbms="postgresql"/>
+    <changeSet author="Aleksey Sytnik" id="0">
+        <tagDatabase tag="0.0"/>
+    </changeSet>
+    <changeSet id="1" author="Aleksey Sytnik">
+        <createTable tableName="products">
+            <column autoIncrement="true"
+                    name="id"
+                    type="BIGINT">
+                <constraints nullable="false"
+                             primaryKey="true"
+                             primaryKeyName="pk_products"/>
+            </column>
+            <column name="user_id"
+                    type="BIGINT"/>
+            <column name="number"
+                    type="VARCHAR(255)"/>
+            <column name="balance"
+                    type="DECIMAL"/>
+            <column name="type"
+                    type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+    <changeSet id="2" author="Aleksey Sytnik">
+        <createTable tableName="users">
+            <column autoIncrement="true"
+                    name="id"
+                    type="BIGINT">
+                <constraints nullable="false"
+                             primaryKey="true"
+                             primaryKeyName="pk_users"/>
+            </column>
+            <column name="name"
+                    type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>
